@@ -1,0 +1,233 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #1e1e2f;
+  color: #ffffff;
+}
+
+/* Top Navigation Bar */
+.top-bar {
+  height: 50px;
+  background-color: #181824;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #2d2d42;
+}
+
+.brand {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #3b82f6;
+}
+
+.translation-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.translation-controls select,
+.translation-controls label {
+  font-size: 13px;
+}
+
+.translation-controls select {
+  background-color: #2b2b3d;
+  color: white;
+  border: 1px solid #3d3d5c;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Workspace Layout (3 Colonne) */
+.workspace {
+  display: flex;
+  height: calc(100vh - 50px);
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Sidebars Generiche */
+.sidebar {
+  background-color: #252538;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+  overflow-y: auto;
+  user-select: none;
+}
+
+#sidebar-left {
+  width: 220px;
+  min-width: 140px;
+  max-width: 400px;
+  border-right: 1px solid #2d2d42;
+}
+
+#sidebar-right {
+  width: 280px;
+  min-width: 200px;
+  max-width: 450px;
+  border-left: 1px solid #2d2d42;
+}
+
+/* Resizers (Barre per ridimensionamento) */
+.resizer {
+  width: 8px;                  /* Larghezza dell'area cliccabile */
+  height: 100%;                /* Estensione verticale completa */
+  background-color: #181824;   /* Colore del bordo/separatore */
+  cursor: col-resize;          /* Mostra le freccette horizontal-resize (↔) */
+  user-select: none;
+  touch-action: none;
+  z-index: 10;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.resizer:hover,
+.resizer.resizing {
+  background-color: #3b82f6;
+}
+
+/* Area Editor Centrale */
+.editor-area {
+  flex: 1;
+  background-color: #13131d;
+  display: block; /* Sostituito flex con block per consentire uno scroll naturale */
+  position: relative;
+  overflow: auto;  /* Scrollbar sia orizzontale che verticale se necessarie */
+  padding: 20px;
+}
+
+.canvas-wrapper {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  margin: 0 auto;  /* Centra il canvas orizzontalmente senza rompere lo scroll */
+  width: fit-content;
+  height: fit-content;
+}
+
+/* Assicura che l'elemento canvas generato da Fabric.js si adatti */
+.canvas-container {
+   margin: 0 auto !important;
+}
+
+/* Pulsanti Generici dell'App */
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.btn.primary { background-color: #3b82f6; color: white; }
+.btn.primary:hover { background-color: #2563eb; }
+
+.btn.secondary { background-color: #3d3d5c; color: white; }
+.btn.secondary:hover { background-color: #4e4e75; }
+
+.btn.danger { background-color: #ef4444; color: white; }
+.btn.danger:hover { background-color: #dc2626; }
+
+.btn.success { background-color: #10b981; color: white; }
+.btn.success:hover { background-color: #059669; }
+
+.full-width {
+  width: 100%;
+}
+
+/* Gestione Pagine (Sidebar Sinistra) */
+.batch-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.batch-controls .btn {
+  flex: 1;
+  font-size: 11px;
+}
+
+.thumbnails-list {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  /* Definisce miniature a larghezza fissa (es. 80px).
+     Si aggiungono colonne automaticamente man mano che allarghi la barra */
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  align-items: start; /* Mantiene l'altezza naturale di ciascuna miniatura */
+  padding: 5px;
+}
+
+/* Wrapper della singola miniatura */
+.thumb-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+/* Immagine della miniatura */
+.thumb-item {
+  width: 100%;
+  height: auto; /* Mantiene le proporzioni originali (altezza variabile) */
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: block;
+  object-fit: contain;
+}
+
+/* Evidenziazione pagina attiva */
+.thumb-wrapper.active .thumb-item {
+  border-color: #3b82f6;
+}
+/* Checkbox in alto a sinistra */
+.thumb-checkbox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* Pulsante "X" in alto a destra */
+.btn-delete-single {
+  position: absolute;
+  top: -5px;
+  right: 1px;
+  z-index: 2;
+  background-color: rgb(255, 255, 255); /* Sfondo rosso semi-trasparente */
+  color: rgb(128, 0, 0);
+  border: none;
+  width: 25px;
+  height: 25px;
+
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0;
+  line-height: normal;
+
+  display: flex;
+  align-items:center;
+  justify-content:center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-delete-single:hover {
+  background-color: #dc2626; /* Rosso più scuro al passaggio del mouse */
+}

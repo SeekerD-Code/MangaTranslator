@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manga Translator & Lettering Studio</title>
+
+  <!-- CSS Personalizzato -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="tool-bar-text.css">
+
+  <!-- Google Fonts per i fumetti -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&family=Mansalva&display=swap" rel="stylesheet">
+
+  <!-- Librerie Esterne -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="top-bar">
+    <div class="brand">MangaTranslator PWA</div>
+
+    <!-- Campo API Key nascosto -->
+    <input type="hidden" id="googleKey" value="AIzaSyAwy6i3AjBscBSz05lQPkSmlFzC9hFDeT0">
+
+    <div class="translation-controls">
+      <label>Da:</label>
+      <select id="sourceLang">
+        <option value="AUTO">Auto-detect</option>
+        <option value="JA">Giapponese</option>
+        <option value="EN">Inglese</option>
+        <option value="ZH">Cinese</option>
+      </select>
+
+      <label>A:</label>
+      <select id="targetLang">
+        <option value="IT" selected>Italiano</option>
+        <option value="EN">Inglese</option>
+        <option value="ES">Spagnolo</option>
+      </select>
+
+      <button id="btnTranslateCurrent" class="btn primary">Traduci Selezione</button>
+    </div>
+  </header>
+
+  <!-- Main Application Workspace -->
+  <div class="workspace">
+
+    <!-- Sidebar Sinistra: Gestione Pagine -->
+    <aside class="sidebar" id="sidebar-left">
+      <div class="upload-section">
+        <input type="file" id="imageUploader" accept="image/*" multiple hidden>
+        <button id="btnUpload" class="btn secondary full-width">+ Carica Pagine</button>
+      </div>
+
+      <div class="batch-controls">
+        <button id="btnSelectAll" class="btn secondary">Seleziona Tutte</button>
+        <button id="btnDeselectAll" class="btn secondary">Deseleziona</button>
+        <button id="btnDeleteSelectedPages" class="btn danger full-width">🗑️ Elimina Selezionate</button>
+      </div>
+
+      <div id="thumbnailsContainer" class="thumbnails-list"></div>
+
+      <div class="export-section">
+        <button id="btnExportZip" class="btn success full-width">Esporta TUTTO (.ZIP)</button>
+      </div>
+    </aside>
+
+    <!-- Divisore Sinistro per Resize -->
+    <div class="resizer" id="resizer-left"></div>
+
+    <!-- Center Canvas Editor (Area di Traduzione/Editing) -->
+    <main class="editor-area">
+      <div class="canvas-wrapper">
+        <canvas id="mangaCanvas"></canvas>
+      </div>
+    </main>
+
+    <!-- Divisore Destro per Resize -->
+    <div class="resizer" id="resizer-right"></div>
+
+    <!-- Sidebar Destra: Barra Formattazione -->
+    <aside class="sidebar toolbar-right" id="sidebar-right">
+
+      <!-- Pulsante in alto nella barra di destra -->
+      <button id="btnAddText" class="btn primary full-width">+ Aggiungi Casella Testo</button>
+
+      <!-- SEZIONE 1: TESTO -->
+      <div class="panel-section">
+        <div class="section-title">Testo</div>
+
+        <div class="control-row">
+          <select id="fontFamily" title="Tipo di Font">
+            <option value="Comic Neue">Comic Neue</option>
+            <option value="Bangers">Bangers</option>
+            <option value="Mansalva">Mansalva</option>
+            <option value="Arial">Arial</option>
+            <option value="Impact">Impact</option>
+          </select>
+          <input type="number" id="fontSize" value="18" min="8" max="120" title="Dimensione Font">
+        </div>
+
+        <div class="control-row button-group">
+          <button id="btnBold" class="tool-btn" title="Grassetto"><b>B</b></button>
+          <button id="btnItalic" class="tool-btn" title="Corsivo"><i>I</i></button>
+          <button id="btnUnderline" class="tool-btn" title="Sottolineato"><u>U</u></button>
+          <button id="btnStrike" class="tool-btn" title="Barrato"><s>S</s></button>
+        </div>
+
+        <div class="control-row button-group">
+          <button id="btnAlignLeft" class="tool-btn" title="Sinistra">⇇</button>
+          <button id="btnAlignCenter" class="tool-btn" title="Centrato">⇔</button>
+          <button id="btnAlignRight" class="tool-btn" title="Destra">⇉</button>
+        </div>
+
+        <div class="control-row button-group">
+          <button id="btnUpperCase" class="tool-btn" title="Converti in MAIUSCOLO">Aa ↑</button>
+          <button id="btnLowerCase" class="tool-btn" title="Converti in minuscolo">Aa ↓</button>
+        </div>
+
+        <div class="control-row">
+          <label for="lineHeight">Interlinea:</label>
+          <input type="number" id="lineHeight" value="1.16" step="0.1" min="0.5" max="3">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="control-row">
+          <label for="textColor">Colora Selezione:</label>
+          <input type="color" id="textColor" value="#000000">
+        </div>
+     </div>
+
+      <!-- SEZIONE 2: OGGETTI / MASCHERA -->
+      <div class="panel-section">
+        <div class="section-title">Oggetti</div>
+
+        <div class="control-row">
+          <label for="bgBorderRadius">Raggio Angoli:</label>
+          <input type="range" id="bgBorderRadius" min="0" max="100" value="30">
+        </div>
+      </div>
+
+      <!-- PULSANTE IN BASSO ELIMINA OGGETTO -->
+      <div class="panel-footer">
+        <button id="btnDeleteSelected" class="btn danger full-width" title="Elimina Oggetto">🗑️ Elimina Oggetto</button>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- Servizi Modulari -->
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>
