@@ -30,6 +30,13 @@ body, html {
   color: #3b82f6;
 }
 
+@font-face {
+  font-family: 'AnimeAce';
+  src: url('fonts/animeace2_reg.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 .translation-controls {
   display: flex;
   align-items: center;

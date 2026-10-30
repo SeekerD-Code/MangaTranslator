@@ -8,7 +8,7 @@ export default class VisionService {
    * @param {string} apiKey - Key di Google Cloud Vision.
    * @returns {Promise<Array>} Array di blocchi di testo unificati per baloon con coordinate.
    */
-  static async detectText(base64Image, apiKey) {
+static async detectText(base64Image, apiKey) {
     const url = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
 
     const response = await fetch(url, {
@@ -29,53 +29,46 @@ export default class VisionService {
     }
 
     const data = await response.json();
-    const fullTextAnnotation = data.responses[0]?.fullTextAnnotation;
+    const textAnnotations = data.responses[0]?.textAnnotations;
 
-    if (!fullTextAnnotation || !fullTextAnnotation.pages) {
+    if (!textAnnotations || textAnnotations.length <= 1) {
       return [];
     }
 
     const rawBlocks = [];
 
-    // 1. Estrazione di tutti i frammenti di paragrafo/frase
-    fullTextAnnotation.pages.forEach(page => {
-      page.blocks.forEach(block => {
-        block.paragraphs.forEach(paragraph => {
-          let paragraphText = '';
+    // textAnnotations[0] è il blocco generale con tutto il testo.
+    // Dal secondo elemento in poi (i >= 1), abbiamo ogni singola parola o simbolo con le sue coordinate precise.
+    for (let i = 1; i < textAnnotations.length; i++) {
+      const annotation = textAnnotations[i];
+      const wordText = annotation.description;
+      const vertices = annotation.boundingPoly?.vertices || [];
 
-          paragraph.words.forEach(word => {
-            const wordText = word.symbols.map(s => s.text).join('');
-            paragraphText += wordText + ' ';
-          });
+      if (vertices.length === 0) continue;
 
-          paragraphText = paragraphText.trim();
+      const xCoords = vertices.map(v => v.x || 0);
+      const yCoords = vertices.map(v => v.y || 0);
 
-          if (paragraphText.length > 0) {
-            const vertices = paragraph.boundingBox?.vertices || [];
-            const xCoords = vertices.map(v => v.x || 0);
-            const yCoords = vertices.map(v => v.y || 0);
+      const minX = Math.min(...xCoords);
+      const maxX = Math.max(...xCoords);
+      const minY = Math.min(...yCoords);
+      const maxY = Math.max(...yCoords);
 
-            const minX = Math.min(...xCoords);
-            const maxX = Math.max(...xCoords);
-            const minY = Math.min(...yCoords);
-            const maxY = Math.max(...yCoords);
-
-            rawBlocks.push({
-              text: paragraphText,
-              x: minX,
-              y: minY,
-              maxX: maxX,
-              maxY: maxY,
-              width: maxX - minX,
-              height: maxY - minY
-            });
-          }
-        });
+      rawBlocks.push({
+        text: wordText,
+        x: minX,
+        y: minY,
+        maxX: maxX,
+        maxY: maxY,
+        width: maxX - minX,
+        height: maxY - minY
       });
-    });
+    }
 
-    // 2. Unificazione dei blocchi vicini nello stesso baloon (Clustering spaziale)
-    const mergedBlocks = this.clusterNearBlocks(rawBlocks, 35, 45);
+    // 2. Unificazione intelligente delle parole vicine nello stesso balloon (Clustering spaziale)
+    // Usiamo soglie strette (es. 10px / 15px) così le parole della stessa nuvoletta si uniscono,
+    // ma le nuvolette separate non vengono mai mescolate.
+    const mergedBlocks = this.clusterNearBlocks(rawBlocks, 10, 15);
 
     return mergedBlocks;
   }
@@ -86,7 +79,7 @@ export default class VisionService {
    * @param {number} maxThresholdX - Distanza massima orizzontale in px tra righe vicine.
    * @param {number} maxThresholdY - Distanza massima verticale in px tra righe vicine.
    */
-  static clusterNearBlocks(blocks, maxThresholdX = 5, maxThresholdY = 5) {
+  static clusterNearBlocks(blocks, maxThresholdX = 10, maxThresholdY = 15) {
     if (blocks.length <= 1) return blocks;
 
     const clusters = [];
