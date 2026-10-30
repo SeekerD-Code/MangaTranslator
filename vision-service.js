@@ -86,7 +86,7 @@ export default class VisionService {
    * @param {number} maxThresholdX - Distanza massima orizzontale in px tra righe vicine.
    * @param {number} maxThresholdY - Distanza massima verticale in px tra righe vicine.
    */
-  static clusterNearBlocks(blocks, maxThresholdX = 10, maxThresholdY = 15) {
+  static clusterNearBlocks(blocks, maxThresholdX = 5, maxThresholdY = 5) {
     if (blocks.length <= 1) return blocks;
 
     const clusters = [];
