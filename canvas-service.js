@@ -29,6 +29,8 @@ export default class CanvasService {
     this._clipboard = null;
 
     this._initEvents();
+
+    this._initTextOverlay(); // <-- overlay
   }
 
   _initEvents() {
@@ -43,13 +45,115 @@ export default class CanvasService {
     this.canvas.on('object:modified', saveState);
     this.canvas.on('object:removed', saveState);
 
-    // Ricalcola le coordinate del mouse ogni volta che l'utente entra in modalità editing di un testo
-    // Questo risolve definitivamente lo sfasamento del cursore in presenza di scroll o layout flex.
+    // FIX CURSORE: Quando scali o modifichi una Textbox, azzeriamo la scala
+    // e applichiamo la larghezza reale per riallineare perfettamente il cursore.
+    this.canvas.on('object:scaling', (e) => {
+      const obj = e.target;
+      if (obj && obj.type === 'textbox') {
+        // Calcola la nuova larghezza reale basata sulla scala applicata col mouse
+        obj.width = obj.width * obj.scaleX;
+        obj.scaleX = 1; // Resetta la scala a 1 in modo che il testo ricalcoli i pixel esatti
+        obj.initDimensions();
+      }
+    });
+
+    this.canvas.on('object:modified', (e) => {
+      saveState();
+      const obj = e.target;
+      if (obj && obj.type === 'textbox') {
+        obj.width = obj.width * (obj.scaleX || 1);
+        obj.scaleX = 1;
+        obj.scaleY = 1;
+        obj.initDimensions();
+        this.canvas.renderAll();
+      }
+    });
+
+    // FIX CURSORE DIGITAZIONE: Ricalcola le dimensioni in tempo reale mentre scrivi (es. quando inserisci spazi)
+    this.canvas.on('text:changed', (e) => {
+      const obj = e.target;
+      if (obj && obj.type === 'textbox') {
+        obj.initDimensions();
+        obj.setCoords(); // Aggiorna le coordinate interne di interazione
+        this.canvas.requestRenderAll();
+      }
+    });
+
+        // Ricalcola le coordinate del mouse ogni volta che l'utente entra in modalità editing di un testo
     this.canvas.on('text:editing:entered', (e) => {
       this.canvas.calcOffset();
       if (e.target) {
         e.target.initDimensions();
         this.canvas.renderAll();
+      }
+    });
+
+    this.canvas.on('text:editing:exited', (e) => {
+      const obj = e.target;
+      if (obj && obj.type === 'textbox') {
+        obj.initDimensions();
+        this.canvas.renderAll();
+      }
+    });
+  }
+
+  _initTextOverlay() {
+    const overlay = document.getElementById('inlineTextOverlay');
+    if (!overlay) return;
+
+    // Quando l'utente fa doppio clic su una casella di testo nel canvas
+    this.canvas.on('mouse:dblclick', (options) => {
+      if (options.target && options.target.type === 'textbox') {
+        const activeObj = options.target;
+
+        // Nascondi temporaneamente l'oggetto Fabric originale
+        activeObj.opacity = 0;
+        this.canvas.renderAll();
+
+        // Ottieni il contenitore del canvas (canvas-wrapper)
+        const wrapperEl = overlay.parentElement; // o il wrapper specifico
+        const wrapperRect = wrapperEl.getBoundingClientRect();
+        const canvasEl = this.canvas.getElement();
+        const canvasRect = canvasEl.getBoundingClientRect();
+
+        // Calcola la posizione corretta basata sull'area visibile del canvas
+        const zoom = this.canvas.getZoom();
+
+        // Distanza relativa tra il canvas e il suo wrapper
+        const offsetX = canvasRect.left - wrapperRect.left;
+        const offsetY = canvasRect.top - wrapperRect.top;
+
+        const left = offsetX + (activeObj.left * zoom);
+        const top = offsetY + (activeObj.top * zoom);
+        const width = activeObj.width * (activeObj.scaleX || 1) * zoom;
+        const height = activeObj.height * (activeObj.scaleY || 1) * zoom;
+
+        // Stila la textarea con lo stesso font e dimensioni del testo del manga
+        overlay.style.display = 'block';
+        overlay.style.left = `${left}px`;
+        overlay.style.top = `${top}px`;
+        overlay.style.width = `${Math.max(width, 60)}px`;
+        overlay.style.height = `${Math.max(height, 30)}px`;
+        overlay.style.fontFamily = activeObj.fontFamily;
+        overlay.style.fontSize = `${activeObj.fontSize * zoom}px`;
+        overlay.style.color = activeObj.fill;
+        overlay.style.textAlign = activeObj.textAlign;
+        overlay.value = activeObj.text;
+
+        overlay.focus();
+
+        // Quando l'utente finisce di scrivere (clicca fuori)
+        const saveAndClose = () => {
+          activeObj.set('text', overlay.value);
+          activeObj.opacity = 1; // Rendi visibile l'oggetto Fabric aggiornato
+          overlay.style.display = 'none';
+          this.canvas.renderAll();
+          this.saveState();
+
+          overlay.removeEventListener('blur', saveAndClose);
+        };
+
+        overlay.addEventListener('blur', saveAndClose);
       }
     });
   }
