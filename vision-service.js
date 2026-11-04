@@ -68,7 +68,7 @@ static async detectText(base64Image, apiKey) {
     // 2. Unificazione intelligente delle parole vicine nello stesso balloon (Clustering spaziale)
     // Usiamo soglie strette (es. 10px / 15px) così le parole della stessa nuvoletta si uniscono,
     // ma le nuvolette separate non vengono mai mescolate.
-    const mergedBlocks = this.clusterNearBlocks(rawBlocks, 10, 15);
+    const mergedBlocks = this.clusterNearBlocks(rawBlocks, 2, 5);
 
     return mergedBlocks;
   }
